@@ -4,19 +4,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Stack;
 
-public class TransportProblem {
-    private final int m;
-    private final int n;
-    private final int[][] cost;
-    private final int[][] allocation;
-    private final boolean[][] visited;
-    private final int[] supply;
-    private final int[] demand;
-    private final double[] u;
-    private final double[] v;
-    private final int[][] delta;
+public abstract class TransportationProblemSolver {
+    protected final int m;
+    protected final int n;
+    protected final int[][] cost;
+    protected final int[][] allocation;
+    protected final int[] supply;
+    protected final int[] demand;
+    protected final double[] u;
+    protected final double[] v;
+    protected final int[][] delta;
 
-    public TransportProblem(int[][] cost, int[] supply, int[] demand) {
+    protected TransportationProblemSolver(int[][] cost, int[] supply, int[] demand) {
         this.m = supply.length;
         this.n = demand.length;
         this.cost = cost;
@@ -26,11 +25,11 @@ public class TransportProblem {
         this.u = new double[m];
         this.v = new double[n];
         this.delta = new int[m][n];
-        this.visited = new boolean[m][n];
-        for (int i = 0; i < m; i++) {
-            Arrays.fill(visited[i], false);
-        }
     }
+
+    protected abstract void computePotentials();
+    protected abstract void computeDelta();
+    protected abstract boolean isOptimal();
 
     private void northwestCornerMethod() {
         int i = 0, j = 0;
@@ -42,53 +41,6 @@ public class TransportProblem {
             if (supply[i] == 0) i++;
             if (demand[j] == 0) j++;
         }
-    }
-
-    private void computePotentials() {
-        Arrays.fill(u, Double.NaN);
-        Arrays.fill(v, Double.NaN);
-        u[0] = 0;
-
-        boolean updated;
-        do {
-            updated = false;
-            for (int i = 0; i < m; i++) {
-                for (int j = 0; j < n; j++) {
-                    if (allocation[i][j] > 0) {
-                        if (!Double.isNaN(u[i]) && Double.isNaN(v[j])) {
-                            v[j] = cost[i][j] - u[i];
-                            updated = true;
-                        } else if (!Double.isNaN(v[j]) && Double.isNaN(u[i])) {
-                            u[i] = cost[i][j] - v[j];
-                            updated = true;
-                        }
-                    }
-                }
-            }
-        } while (updated);
-    }
-
-    private void computeDelta() {
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (allocation[i][j] == 0) {
-                    delta[i][j] = cost[i][j] - (int) (u[i] + v[j]);
-                } else {
-                    delta[i][j] = Integer.MAX_VALUE;
-                }
-            }
-        }
-    }
-
-    private boolean isOptimal() {
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (delta[i][j] < 0) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     private void adjustAllocation() {
@@ -123,6 +75,7 @@ public class TransportProblem {
         int nearestCol;
         int nearestRow;
         int minDistance;
+        boolean[][] visited = new boolean[m][n];
 
         for (int i = 0; i < m; i++) {
             Arrays.fill(visited[i], false);
@@ -211,7 +164,6 @@ public class TransportProblem {
 
 class ChainElement {
     int i, j, cost, allocation, sign = 1;
-    boolean madeTurn = true;
 
     ChainElement(int i, int j, int cost, int allocation) {
         this.i = i;
@@ -294,4 +246,3 @@ class Chain {
         return true;
     }
 }
-
