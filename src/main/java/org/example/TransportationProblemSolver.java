@@ -15,21 +15,49 @@ public abstract class TransportationProblemSolver {
     protected final double[] v;
     protected final int[][] delta;
 
-    protected TransportationProblemSolver(int[][] cost, int[] supply, int[] demand) {
-        this.m = supply.length;
-        this.n = demand.length;
-        this.cost = cost;
-        this.supply = Arrays.copyOf(supply, m);
-        this.demand = Arrays.copyOf(demand, n);
+    protected TransportationProblemSolver(TransportationProblem problem) {
+        this.m = problem.supply.length;
+        this.n = problem.demand.length;
+        this.cost = problem.cost;
+        this.supply = Arrays.copyOf(problem.supply, m);
+        this.demand = Arrays.copyOf(problem.demand, n);
         this.allocation = new int[m][n];
         this.u = new double[m];
         this.v = new double[n];
         this.delta = new int[m][n];
+
+        if (!isSolvable())
+            throw new RuntimeException("Supplies do not match demands");
     }
 
-    protected abstract void computePotentials();
     protected abstract void computeDelta();
-    protected abstract boolean isOptimal();
+
+    public void solve() {
+        northwestCornerMethod();
+        while (true) {
+            computePotentials();
+            computeDelta();
+            if (isOptimal()) {
+                break;
+            }
+            adjustAllocation();
+        }
+    }
+
+    public int[][] getAllocation() {
+        return allocation;
+    }
+
+    private boolean isSolvable() {
+        int supplySum = 0, demandSum = 0;
+        for (int i = 0; i < m; i++)
+            supplySum += supply[i];
+
+        for (int i = 0; i < n; i++)
+            demandSum += demand[i];
+
+        return supplySum == demandSum;
+    }
 
     private void northwestCornerMethod() {
         int i = 0, j = 0;
@@ -41,6 +69,41 @@ public abstract class TransportationProblemSolver {
             if (supply[i] == 0) i++;
             if (demand[j] == 0) j++;
         }
+    }
+
+    private void computePotentials() {
+        Arrays.fill(u, Double.NaN);
+        Arrays.fill(v, Double.NaN);
+        u[0] = 0;
+
+        boolean updated;
+        do {
+            updated = false;
+            for (int i = 0; i < m; i++) {
+                for (int j = 0; j < n; j++) {
+                    if (allocation[i][j] > 0) {
+                        if (!Double.isNaN(u[i]) && Double.isNaN(v[j])) {
+                            v[j] = cost[i][j] - u[i];
+                            updated = true;
+                        } else if (!Double.isNaN(v[j]) && Double.isNaN(u[i])) {
+                            u[i] = cost[i][j] - v[j];
+                            updated = true;
+                        }
+                    }
+                }
+            }
+        } while (updated);
+    }
+
+    private boolean isOptimal() {
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (delta[i][j] < 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void adjustAllocation() {
@@ -136,29 +199,6 @@ public abstract class TransportationProblemSolver {
                 chain.chain.remove(stack.pop());
             }
         }
-    }
-
-    public void solve() {
-        northwestCornerMethod();
-        while (true) {
-            computePotentials();
-            computeDelta();
-            if (isOptimal()) {
-                break;
-            }
-            adjustAllocation();
-        }
-    }
-
-    public void printSolution() {
-        System.out.println("Оптимальний розподіл:");
-        for (int i = 0; i < m; i++) {
-            System.out.println(Arrays.toString(allocation[i]));
-        }
-    }
-
-    public int[][] getAllocation() {
-        return allocation;
     }
 }
 

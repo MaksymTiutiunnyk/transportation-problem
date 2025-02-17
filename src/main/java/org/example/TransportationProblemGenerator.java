@@ -3,15 +3,11 @@ package org.example;
 import java.util.Random;
 
 public class TransportationProblemGenerator {
-    int[][] cost;
-    int[] supply;
-    int[] demand;
-
-    TransportationProblemGenerator(int m, int n, int maxCost, int maxSupply, int maxDemand, long seed) {
+    public static TransportationProblem generate(int m, int n, int maxCost, int maxSupply, int maxDemand, long seed) {
         Random rand = new Random(seed);
-        cost = new int[m][n];
-        supply = new int[m];
-        demand = new int[n];
+        int[][] cost = new int[m][n];
+        int[] supply = new int[m];
+        int[] demand = new int[n];
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
@@ -45,5 +41,7 @@ public class TransportationProblemGenerator {
                 }
             }
         }
+
+        return new TransportationProblem(cost, supply, demand);
     }
 }
