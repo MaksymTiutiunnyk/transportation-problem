@@ -30,11 +30,10 @@ public class ParallelTransportationProblemSolver extends TransportationProblemSo
             if (end - start <= 2) {
                 for (int i = start; i < end; i++) {
                     for (int j = 0; j < problemSolver.n; j++) {
-                        if (problemSolver.allocation[i][j] == 0) {
+                        if (problemSolver.allocation[i][j] == 0)
                             problemSolver.delta[i][j] = problemSolver.cost[i][j] - (int) (problemSolver.u[i] + problemSolver.v[j]);
-                        } else {
+                        else
                             problemSolver.delta[i][j] = Integer.MAX_VALUE;
-                        }
                     }
                 }
             } else {

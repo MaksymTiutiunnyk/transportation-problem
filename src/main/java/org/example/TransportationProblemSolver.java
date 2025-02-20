@@ -11,6 +11,7 @@ public abstract class TransportationProblemSolver {
     protected final double[] u, v;
     protected final int[][] delta;
     private Chain chain;
+    private int minI, minJ;
 
     protected TransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
@@ -34,9 +35,8 @@ public abstract class TransportationProblemSolver {
         while (true) {
             computePotentials();
             computeDelta();
-            if (isOptimal()) {
+            if (isOptimal())
                 break;
-            }
             buildChain();
             adjustAllocation();
         }
@@ -96,25 +96,15 @@ public abstract class TransportationProblemSolver {
     private boolean isOptimal() {
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
-                if (delta[i][j] < 0) {
+                if (delta[i][j] < 0)
                     return false;
-                }
             }
         }
         return true;
     }
 
-    private void buildChain() {
-        boolean isSearchInColumn = true;
-        ChainElement currentElement;
-        int col;
-        int row;
-        int nearestCol;
-        int nearestRow;
-        int minDistance;
-        boolean[][] visited = new boolean[m][n];
-
-        int minI = 0, minJ = 0, minDelta = Integer.MAX_VALUE;
+    private void defineMinDeltaIndexes() {
+        int minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
                 if (delta[i][j] < minDelta) {
@@ -124,12 +114,14 @@ public abstract class TransportationProblemSolver {
                 }
             }
         }
+    }
 
-        chain = new Chain();
+    private void buildChain() {
+        boolean isSearchInColumn = true;
+        boolean[][] visited = new boolean[m][n];
+        chain = new Chain(); // create a new chain on each iteration
 
-        for (int i = 0; i < m; i++) {
-            Arrays.fill(visited[i], false);
-        }
+        defineMinDeltaIndexes();
 
         Stack<ChainElement> stack = new Stack<>();
         final ChainElement firstElement = new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]);
@@ -139,54 +131,50 @@ public abstract class TransportationProblemSolver {
         while (!chain.isClosed()) {
             isSearchInColumn = !isSearchInColumn;
 
-            currentElement = stack.peek();
+            ChainElement currentElement = stack.peek();
             visited[currentElement.i][currentElement.j] = true;
 
-            col = currentElement.j;
-            row = currentElement.i;
-            nearestCol = -1;
-            nearestRow = -1;
-            minDistance = Integer.MAX_VALUE;
+            int nearestIndex = findNearestIndex(currentElement, isSearchInColumn, visited);
 
-            if (!isSearchInColumn) {
-                for (int j = 0; j < n; j++) {
-                    if (allocation[row][j] > 0 && j != col && !visited[row][j]) {
-                        int distance = Math.abs(j - col);
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            nearestCol = j;
-                        }
-                    }
-                }
+            if (nearestIndex != -1) {
+                ChainElement newElement = isSearchInColumn
+                        ? new ChainElement(nearestIndex, currentElement.j, cost[nearestIndex][currentElement.j], allocation[nearestIndex][currentElement.j])
+                        : new ChainElement(currentElement.i, nearestIndex, cost[currentElement.i][nearestIndex], allocation[currentElement.i][nearestIndex]);
 
-                if (nearestCol != -1) {
-                    ChainElement newElement = new ChainElement(row, nearestCol, cost[row][nearestCol], allocation[row][nearestCol]);
-                    stack.push(newElement);
-                    chain.add(newElement);
-                } else {
-                    chain.chain.remove(stack.pop());
-                }
-                continue;
-            }
+                stack.push(newElement);
+                chain.add(newElement);
+            } else
+                chain.chain.remove(stack.pop());
+        }
+    }
 
+    private int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
+        int minDistance = Integer.MAX_VALUE;
+        int nearestIndex = -1;
+        int fixedIndex = searchInColumn ? element.j : element.i;
+
+        if (searchInColumn) {
             for (int i = 0; i < m; i++) {
-                if (allocation[i][col] > 0 && i != row && !visited[i][col]) {
-                    int distance = Math.abs(i - row);
+                if (allocation[i][fixedIndex] > 0 && i != element.i && !visited[i][fixedIndex]) {
+                    int distance = Math.abs(i - element.i);
                     if (distance < minDistance) {
                         minDistance = distance;
-                        nearestRow = i;
+                        nearestIndex = i;
                     }
                 }
             }
-
-            if (nearestRow != -1) {
-                ChainElement newElement = new ChainElement(nearestRow, col, cost[nearestRow][col], allocation[nearestRow][col]);
-                chain.add(newElement);
-                stack.push(newElement);
-            } else {
-                chain.chain.remove(stack.pop());
+        } else {
+            for (int j = 0; j < n; j++) {
+                if (allocation[fixedIndex][j] > 0 && j != element.j && !visited[fixedIndex][j]) {
+                    int distance = Math.abs(j - element.j);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestIndex = j;
+                    }
+                }
             }
         }
+        return nearestIndex;
     }
 
     private void adjustAllocation() {
@@ -201,9 +189,9 @@ public abstract class TransportationProblemSolver {
 }
 
 
-// створив два класи (Ланцюг і ЕлементЛанцюга), щоб було легше будувати цей ланцюг
 class ChainElement {
-    int i, j, cost, allocation, sign = 1;
+    int i, j, cost, allocation;
+    int sign = 1; // 1 is positive (+), -1 is negative (-)
 
     ChainElement(int i, int j, int cost, int allocation) {
         this.i = i;
@@ -231,24 +219,18 @@ class Chain {
 
     private boolean columnContainsPlus(int column) {
         for (ChainElement chainElement : chain) {
-            if (chainElement.j == column && chainElement.sign == 1) {
+            if (chainElement.j == column && chainElement.sign == 1)
                 return true;
-            }
         }
         return false;
     }
 
     private boolean rowContainsPlus(int row) {
         for (ChainElement chainElement : chain) {
-            if (chainElement.i == row && chainElement.sign == 1) {
+            if (chainElement.i == row && chainElement.sign == 1)
                 return true;
-            }
         }
         return false;
-    }
-
-    public int size() {
-        return chain.size();
     }
 
     public int getMinValue() {
@@ -263,24 +245,21 @@ class Chain {
     }
 
     public boolean isClosed() {
-        if (chain.size() < 4) {
+        if (chain.size() < 4)
             return false;
-        }
 
         ChainElement first = chain.getFirst();
         ChainElement last = chain.getLast();
 
-        if (first.i != last.i && first.j != last.j) {
+        if (first.i != last.i && first.j != last.j)
             return false;
-        }
 
         for (int k = 0; k < chain.size() - 1; k++) {
             ChainElement current = chain.get(k);
             ChainElement next = chain.get(k + 1);
 
-            if (current.i != next.i && current.j != next.j) {
+            if (current.i != next.i && current.j != next.j)
                 return false;
-            }
         }
 
         return true;

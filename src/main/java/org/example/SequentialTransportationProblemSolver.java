@@ -9,11 +9,10 @@ public class SequentialTransportationProblemSolver extends TransportationProblem
     protected void computeDelta() {
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
-                if (allocation[i][j] == 0) {
+                if (allocation[i][j] == 0)
                     delta[i][j] = cost[i][j] - (int) (u[i] + v[j]);
-                } else {
+                else
                     delta[i][j] = Integer.MAX_VALUE;
-                }
             }
         }
     }

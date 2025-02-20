@@ -7,7 +7,6 @@ public class Main {
         long endTime = System.currentTimeMillis();
         System.out.println("Time taken for generation: " + (endTime - startTime) + "ms");
 
-        // на цих даних тестував послідовний алгоритм на правильність роботи
 //        int[][] cost = {
 //                {3, 1, 4, 8},
 //                {5, 1, 1, 4},
@@ -32,10 +31,9 @@ public class Main {
 
         final boolean areEqual = SolutionValidator.compareSolutions(sequentialTransportationProblemSolver.getAllocation(), parallelTransportationProblemSolver.getAllocation());
 
-        if (areEqual) {
+        if (areEqual)
             System.out.println("Solutions are equal");
-        } else {
+        else
             System.out.println("Solutions are not equal");
-        }
     }
 }

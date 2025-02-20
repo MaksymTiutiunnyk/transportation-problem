@@ -10,9 +10,8 @@ public class TransportationProblemGenerator {
         int[] demand = new int[n];
 
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < n; j++)
                 cost[i][j] = rand.nextInt(maxCost) + 1;
-            }
         }
 
         int totalSupply = 0, totalDemand = 0;
@@ -21,7 +20,7 @@ public class TransportationProblemGenerator {
             totalSupply += supply[i];
         }
         for (int j = 0; j < n; j++) {
-            demand[j] = rand.nextInt(maxDemand - 1) + 1; // Мінімум 1
+            demand[j] = rand.nextInt(maxDemand - 1) + 1;
             totalDemand += demand[j];
         }
 

@@ -2,8 +2,7 @@ package org.example;
 
 public class TransportationProblem {
     final int[][] cost;
-    final int[] supply;
-    final int[] demand;
+    final int[] supply, demand;
 
     TransportationProblem(int[][] cost, int[] supply, int[] demand) {
         this.cost = cost;
