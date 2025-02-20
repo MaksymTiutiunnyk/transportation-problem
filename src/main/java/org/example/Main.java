@@ -3,10 +3,11 @@ package org.example;
 public class Main {
     public static void main(String[] args) {
         long startTime = System.currentTimeMillis();
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(10000, 10000, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(1000, 10000, 10, 100, 100, 1);
         long endTime = System.currentTimeMillis();
         System.out.println("Time taken for generation: " + (endTime - startTime) + "ms");
 
+        // на цих даних тестував послідовний алгоритм на правильність роботи
 //        int[][] cost = {
 //                {3, 1, 4, 8},
 //                {5, 1, 1, 4},
@@ -23,8 +24,8 @@ public class Main {
         endTime = System.currentTimeMillis();
         System.out.println("Time taken for sequential transport problem: " + (endTime - startTime) + "ms");
 
-        TransportationProblemSolver parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
         startTime = System.currentTimeMillis();
+        TransportationProblemSolver parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
         parallelTransportationProblemSolver.solve();
         endTime = System.currentTimeMillis();
         System.out.println("Time taken for parallel transport problem: " + (endTime - startTime) + "ms");

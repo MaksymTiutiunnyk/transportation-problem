@@ -5,15 +5,12 @@ import java.util.Arrays;
 import java.util.Stack;
 
 public abstract class TransportationProblemSolver {
-    protected final int m;
-    protected final int n;
-    protected final int[][] cost;
-    protected final int[][] allocation;
-    protected final int[] supply;
-    protected final int[] demand;
-    protected final double[] u;
-    protected final double[] v;
+    protected final int m, n;
+    protected final int[][] cost, allocation;
+    protected final int[] supply, demand;
+    protected final double[] u, v;
     protected final int[][] delta;
+    private Chain chain;
 
     protected TransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
@@ -40,6 +37,7 @@ public abstract class TransportationProblemSolver {
             if (isOptimal()) {
                 break;
             }
+            buildChain();
             adjustAllocation();
         }
     }
@@ -106,7 +104,16 @@ public abstract class TransportationProblemSolver {
         return true;
     }
 
-    private void adjustAllocation() {
+    private void buildChain() {
+        boolean isSearchInColumn = true;
+        ChainElement currentElement;
+        int col;
+        int row;
+        int nearestCol;
+        int nearestRow;
+        int minDistance;
+        boolean[][] visited = new boolean[m][n];
+
         int minI = 0, minJ = 0, minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
@@ -118,33 +125,14 @@ public abstract class TransportationProblemSolver {
             }
         }
 
-        Chain chain = new Chain();
-        findCycle(chain, new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]));
-
-        int minValue = chain.getMinValue();
-        for (ChainElement chainElement : chain.chain) {
-            if (chainElement.sign == -1)
-                allocation[chainElement.i][chainElement.j] -= minValue;
-            else
-                allocation[chainElement.i][chainElement.j] += minValue;
-        }
-    }
-
-    private void findCycle(Chain chain, ChainElement firstElement) {
-        boolean isSearchInColumn = true;
-        ChainElement currentElement;
-        int col;
-        int row;
-        int nearestCol;
-        int nearestRow;
-        int minDistance;
-        boolean[][] visited = new boolean[m][n];
+        chain = new Chain();
 
         for (int i = 0; i < m; i++) {
             Arrays.fill(visited[i], false);
         }
 
         Stack<ChainElement> stack = new Stack<>();
+        final ChainElement firstElement = new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]);
         stack.push(firstElement);
         chain.add(firstElement);
 
@@ -200,8 +188,20 @@ public abstract class TransportationProblemSolver {
             }
         }
     }
+
+    private void adjustAllocation() {
+        int minValue = chain.getMinValue();
+        for (ChainElement chainElement : chain.chain) {
+            if (chainElement.sign == -1)
+                allocation[chainElement.i][chainElement.j] -= minValue;
+            else
+                allocation[chainElement.i][chainElement.j] += minValue;
+        }
+    }
 }
 
+
+// створив два класи (Ланцюг і ЕлементЛанцюга), щоб було легше будувати цей ланцюг
 class ChainElement {
     int i, j, cost, allocation, sign = 1;
 

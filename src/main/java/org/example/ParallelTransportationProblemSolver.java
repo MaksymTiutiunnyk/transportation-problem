@@ -17,30 +17,30 @@ public class ParallelTransportationProblemSolver extends TransportationProblemSo
 
     private static class ComputeDeltaTask extends RecursiveAction {
         private final int start, end;
-        private final ParallelTransportationProblemSolver problem;
+        private final ParallelTransportationProblemSolver problemSolver;
 
-        ComputeDeltaTask(int start, int end, ParallelTransportationProblemSolver problem) {
+        ComputeDeltaTask(int start, int end, ParallelTransportationProblemSolver problemSolver) {
             this.start = start;
             this.end = end;
-            this.problem = problem;
+            this.problemSolver = problemSolver;
         }
 
         @Override
         protected void compute() {
             if (end - start <= 2) {
                 for (int i = start; i < end; i++) {
-                    for (int j = 0; j < problem.n; j++) {
-                        if (problem.allocation[i][j] == 0) {
-                            problem.delta[i][j] = problem.cost[i][j] - (int) (problem.u[i] + problem.v[j]);
+                    for (int j = 0; j < problemSolver.n; j++) {
+                        if (problemSolver.allocation[i][j] == 0) {
+                            problemSolver.delta[i][j] = problemSolver.cost[i][j] - (int) (problemSolver.u[i] + problemSolver.v[j]);
                         } else {
-                            problem.delta[i][j] = Integer.MAX_VALUE;
+                            problemSolver.delta[i][j] = Integer.MAX_VALUE;
                         }
                     }
                 }
             } else {
                 int mid = (start + end) / 2;
-                ComputeDeltaTask left = new ComputeDeltaTask(start, mid, problem);
-                ComputeDeltaTask right = new ComputeDeltaTask(mid, end, problem);
+                ComputeDeltaTask left = new ComputeDeltaTask(start, mid, problemSolver);
+                ComputeDeltaTask right = new ComputeDeltaTask(mid, end, problemSolver);
                 invokeAll(left, right);
             }
         }
