@@ -4,16 +4,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Stack;
 
-public abstract class TransportationProblemSolver {
+public class TransportationProblemSolver {
     protected final int m, n;
     protected final int[][] cost, allocation;
     protected final int[] supply, demand;
     protected final int[] u, v;
     protected final int[][] delta;
-    private Chain chain;
-    private int minI, minJ;
+    protected Chain chain;
+    protected int minI, minJ;
     protected final int NOT_ALLOCATED = -1, NO_SUPPLY = Integer.MAX_VALUE, NO_DEMAND = Integer.MAX_VALUE, UNDEFINED = Integer.MIN_VALUE;
-    private long nearestIndexTime = 0, minDeltaTime = 0;
 
     protected TransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
@@ -32,85 +31,16 @@ public abstract class TransportationProblemSolver {
             throw new RuntimeException("Supplies do not match demands");
     }
 
-    protected void computeDelta() {
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (allocation[i][j] == NOT_ALLOCATED)
-                    delta[i][j] = cost[i][j] - (u[i] + v[j]);
-                else
-                    delta[i][j] = UNDEFINED;
-            }
-        }
-    }
-
     public void solve() {
-        long cornerTime = 0, potentialsTime = 0, deltaTime = 0, optimalTime = 0, chainTime = 0, allocationTime = 0, startTime, endTime;
-        startTime = System.currentTimeMillis();
         northwestCornerMethod();
-        endTime = System.currentTimeMillis();
-        cornerTime += endTime - startTime;
         while (true) {
-            startTime = System.currentTimeMillis();
             computePotentials();
-            endTime = System.currentTimeMillis();
-            potentialsTime += endTime - startTime;
-            startTime = System.currentTimeMillis();
             computeDelta();
-            endTime = System.currentTimeMillis();
-            deltaTime += endTime - startTime;
-            startTime = System.currentTimeMillis();
             if (isOptimal())
                 break;
-            endTime = System.currentTimeMillis();
-            optimalTime += endTime - startTime;
-            startTime = System.currentTimeMillis();
             buildChain();
-            endTime = System.currentTimeMillis();
-            chainTime += endTime - startTime;
-            startTime = System.currentTimeMillis();
             adjustAllocation();
-            endTime = System.currentTimeMillis();
-            allocationTime += endTime - startTime;
         }
-        System.out.println("cornerTime: " + cornerTime + " potentialsTime: " + potentialsTime + " deltaTime: " + deltaTime + " optimalTime: " + optimalTime + " chainTime: " + chainTime + " allocationTime: " + allocationTime + " nearestIndexTime: " + nearestIndexTime + " minDeltaTime: " + minDeltaTime);
-    }
-
-    public int[][] getAllocation() {
-        return allocation;
-    }
-
-    public int getCost() {
-        int totalCost = 0;
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (allocation[i][j] > 0)
-                    totalCost += allocation[i][j] * cost[i][j];
-            }
-        }
-        return totalCost;
-    }
-
-    private boolean isBalanced() {
-        int supplySum = 0, demandSum = 0;
-        for (int i = 0; i < m; i++)
-            supplySum += supply[i];
-
-        for (int i = 0; i < n; i++)
-            demandSum += demand[i];
-
-        return supplySum == demandSum;
-    }
-
-    protected int degenerateCount() {
-        int basisCount = 0;
-
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (allocation[i][j] != NOT_ALLOCATED)
-                    basisCount++;
-            }
-        }
-        return m + n - 1 - basisCount;
     }
 
     private void northwestCornerMethod() {
@@ -122,14 +52,14 @@ public abstract class TransportationProblemSolver {
             if (supply[i] == demand[j]) {
                 supply[i] = NO_SUPPLY;
                 demand[j] = 0;
-                i++;
+                ++i;
             } else {
                 supply[i] -= currentAllocation;
                 demand[j] -= currentAllocation;
                 if (supply[i] == 0) supply[i] = NO_SUPPLY;
                 if (demand[j] == 0) demand[j] = NO_DEMAND;
-                if (supply[i] == NO_SUPPLY) i++;
-                else j++;
+                if (supply[i] == NO_SUPPLY) ++i;
+                else ++j;
             }
         }
     }
@@ -158,6 +88,17 @@ public abstract class TransportationProblemSolver {
         } while (updated);
     }
 
+    protected void computeDelta() {
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] == NOT_ALLOCATED)
+                    delta[i][j] = cost[i][j] - (u[i] + v[j]);
+                else
+                    delta[i][j] = UNDEFINED;
+            }
+        }
+    }
+
     protected boolean isOptimal() {
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
@@ -168,27 +109,12 @@ public abstract class TransportationProblemSolver {
         return true;
     }
 
-    private void defineMinDeltaIndexes() {
-        int minDelta = Integer.MAX_VALUE;
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (delta[i][j] != UNDEFINED && delta[i][j] < minDelta) {
-                    minDelta = delta[i][j];
-                    minI = i;
-                    minJ = j;
-                }
-            }
-        }
-    }
-
     private void buildChain() {
         boolean isSearchInColumn = true;
         boolean[][] visited = new boolean[m][n];
         chain = new Chain(); // create a new chain on each iteration
 
-        long start = System.currentTimeMillis();
         defineMinDeltaIndexes();
-        minDeltaTime += System.currentTimeMillis() - start;
 
         Stack<ChainElement> stack = new Stack<>();
         final ChainElement firstElement = new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]);
@@ -201,10 +127,7 @@ public abstract class TransportationProblemSolver {
             ChainElement currentElement = stack.peek();
             visited[currentElement.i][currentElement.j] = true;
 
-            start = System.currentTimeMillis();
             int nearestIndex = findNearestIndex(currentElement, isSearchInColumn, visited);
-//            System.out.println("nearest index: " + nearestIndex);
-            nearestIndexTime += System.currentTimeMillis() - start;
 
             if (nearestIndex != -1) {
                 ChainElement newElement = isSearchInColumn
@@ -215,6 +138,19 @@ public abstract class TransportationProblemSolver {
                 chain.add(newElement);
             } else
                 chain.chain.remove(stack.pop());
+        }
+    }
+
+    protected void defineMinDeltaIndexes() {
+        int minDelta = Integer.MAX_VALUE;
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (delta[i][j] != UNDEFINED && delta[i][j] < minDelta) {
+                    minDelta = delta[i][j];
+                    minI = i;
+                    minJ = j;
+                }
+            }
         }
     }
 
@@ -272,8 +208,46 @@ public abstract class TransportationProblemSolver {
                     degenerateElements.add(chainElement);
             }
             degenerateElements.sort((chainElement1, chainElement2) -> cost[chainElement2.i][chainElement2.j] - cost[chainElement1.i][chainElement1.j]);
-            for (int i = 0; i < degenerateCount; i++)
+            for (int i = 0; i < degenerateCount; ++i)
                 allocation[degenerateElements.get(i).i][degenerateElements.get(i).j] = 0;
         }
+    }
+
+    public int[][] getAllocation() {
+        return allocation;
+    }
+
+    public int getCost() {
+        int totalCost = 0;
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] > 0)
+                    totalCost += allocation[i][j] * cost[i][j];
+            }
+        }
+        return totalCost;
+    }
+
+    private boolean isBalanced() {
+        int supplySum = 0, demandSum = 0;
+        for (int i = 0; i < m; ++i)
+            supplySum += supply[i];
+
+        for (int i = 0; i < n; ++i)
+            demandSum += demand[i];
+
+        return supplySum == demandSum;
+    }
+
+    protected int degenerateCount() {
+        int basisCount = 0;
+
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] != NOT_ALLOCATED)
+                    ++basisCount;
+            }
+        }
+        return m + n - 1 - basisCount;
     }
 }

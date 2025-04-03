@@ -51,7 +51,7 @@ class Chain {
         if (first.i != last.i && first.j != last.j)
             return false;
 
-        for (int k = 0; k < chain.size() - 1; k++) {
+        for (int k = 0; k < chain.size() - 1; ++k) {
             ChainElement current = chain.get(k);
             ChainElement next = chain.get(k + 1);
 
