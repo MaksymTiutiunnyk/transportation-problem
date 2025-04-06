@@ -12,6 +12,7 @@ public class TransportationProblemSolver {
     protected final int[][] delta;
     protected Chain chain;
     protected int minI, minJ;
+    protected boolean isCurrentSolutionOptimal;
     protected final int NOT_ALLOCATED = -1, NO_SUPPLY = Integer.MAX_VALUE, NO_DEMAND = Integer.MAX_VALUE, UNDEFINED = Integer.MIN_VALUE;
 
     protected TransportationProblemSolver(TransportationProblem problem) {
@@ -21,7 +22,7 @@ public class TransportationProblemSolver {
         this.supply = Arrays.copyOf(problem.supply, m);
         this.demand = Arrays.copyOf(problem.demand, n);
         this.allocation = new int[m][n];
-        for (int i = 0; i < m; i++)
+        for (int i = 0; i < m; ++i)
             Arrays.fill(allocation[i], NOT_ALLOCATED);
         this.u = new int[m];
         this.v = new int[n];
@@ -34,9 +35,10 @@ public class TransportationProblemSolver {
     public void solve() {
         northwestCornerMethod();
         while (true) {
+            isCurrentSolutionOptimal = true;
             computePotentials();
-            computeDelta();
-            if (isOptimal())
+            conductDeltaOperations();
+            if (isCurrentSolutionOptimal)
                 break;
             buildChain();
             adjustAllocation();
@@ -88,33 +90,31 @@ public class TransportationProblemSolver {
         } while (updated);
     }
 
-    protected void computeDelta() {
+    protected void conductDeltaOperations() {
+        int minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
-                if (allocation[i][j] == NOT_ALLOCATED)
+                if (allocation[i][j] == NOT_ALLOCATED) {
                     delta[i][j] = cost[i][j] - (u[i] + v[j]);
-                else
+
+                    if (delta[i][j] < 0)
+                        isCurrentSolutionOptimal = false;
+
+                    if (delta[i][j] < minDelta) {
+                        minDelta = delta[i][j];
+                        minI = i;
+                        minJ = j;
+                    }
+                } else
                     delta[i][j] = UNDEFINED;
             }
         }
-    }
-
-    protected boolean isOptimal() {
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (delta[i][j] != UNDEFINED && delta[i][j] < 0)
-                    return false;
-            }
-        }
-        return true;
     }
 
     private void buildChain() {
         boolean isSearchInColumn = true;
         boolean[][] visited = new boolean[m][n];
         chain = new Chain(); // create a new chain on each iteration
-
-        defineMinDeltaIndexes();
 
         Stack<ChainElement> stack = new Stack<>();
         final ChainElement firstElement = new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]);
@@ -138,19 +138,6 @@ public class TransportationProblemSolver {
                 chain.add(newElement);
             } else
                 chain.chain.remove(stack.pop());
-        }
-    }
-
-    protected void defineMinDeltaIndexes() {
-        int minDelta = Integer.MAX_VALUE;
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (delta[i][j] != UNDEFINED && delta[i][j] < minDelta) {
-                    minDelta = delta[i][j];
-                    minI = i;
-                    minJ = j;
-                }
-            }
         }
     }
 
@@ -192,8 +179,7 @@ public class TransportationProblemSolver {
                     allocation[chainElement.i][chainElement.j] = NOT_ALLOCATED;
                 else
                     allocation[chainElement.i][chainElement.j] -= minValue;
-            }
-            else {
+            } else {
                 if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
                     allocation[chainElement.i][chainElement.j] += minValue + 1;
                 else
