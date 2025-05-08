@@ -45,7 +45,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    private void northwestCornerMethod() {
+    public void northwestCornerMethod() {
         int i = 0, j = 0;
         while (i < m && j < n) {
             int currentAllocation = Math.min(supply[i], demand[j]);
@@ -66,7 +66,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    protected void computePotentials() {
+    public void computePotentials() {
         Arrays.fill(u, UNDEFINED);
         Arrays.fill(v, UNDEFINED);
         u[0] = 0;
@@ -90,7 +90,7 @@ public class TransportationProblemSolver {
         } while (updated);
     }
 
-    protected void conductDeltaOperations() {
+    public void conductDeltaOperations() {
         int minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
@@ -111,7 +111,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    private void buildChain() {
+    public void buildChain() {
         boolean isSearchInColumn = true;
         boolean[][] visited = new boolean[m][n];
         chain = new Chain(); // create a new chain on each iteration
@@ -141,7 +141,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    protected int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
+    public int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
         int minDistance = Integer.MAX_VALUE;
         int nearestIndex = -1;
         int fixedIndex = searchInColumn ? element.j : element.i;
@@ -170,7 +170,7 @@ public class TransportationProblemSolver {
         return nearestIndex;
     }
 
-    protected void adjustAllocation() {
+    public void adjustAllocation() {
         int minValue = chain.getMinValue();
 
         for (ChainElement chainElement : chain.chain) {
@@ -193,7 +193,6 @@ public class TransportationProblemSolver {
                 if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
                     degenerateElements.add(chainElement);
             }
-            degenerateElements.sort((chainElement1, chainElement2) -> cost[chainElement2.i][chainElement2.j] - cost[chainElement1.i][chainElement1.j]);
             for (int i = 0; i < degenerateCount; ++i)
                 allocation[degenerateElements.get(i).i][degenerateElements.get(i).j] = 0;
         }

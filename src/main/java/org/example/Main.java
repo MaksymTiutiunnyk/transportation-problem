@@ -1,7 +1,7 @@
 package org.example;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 //        A normal test case (you can comment in lines with printing an optimal solution and a total cost)
 //        int[][] cost = {
 //                {3, 1, 4, 8},
@@ -24,22 +24,38 @@ public class Main {
 //        TransportationProblem transportationProblem = new TransportationProblem(cost, supply, demand);
 
 //      Automatically generated (do not comment in lines with printing an optimal solution and a total cost if the problem is huge)
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(10, 100, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(100, 100, 10, 100, 100, 1);
 
-        long startTime = System.currentTimeMillis();
-        TransportationProblemSolver transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
-        transportationProblemSolver.solve();
-        long endTime = System.currentTimeMillis();
+        long startTime = 0, endTime = 0, totalSequential = 0, totalParallel = 0;
+        TransportationProblemSolver transportationProblemSolver = null;
+        ParallelTransportationProblemSolver parallelTransportationProblemSolver = null;
+
+//        for (int i = 1; i <= 23; ++i) {
+            startTime = System.currentTimeMillis();
+            transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
+            transportationProblemSolver.solve();
+            endTime = System.currentTimeMillis();
+
+//            if (i > 3)
+//                totalSequential += endTime - startTime;
+//        }
 
         System.out.println("Time taken for sequential transport problem: " + (endTime - startTime) + "ms");
 //        TransportationProblemPrinter.printAllocation("Optimal solution: ", transportationProblemSolver.getAllocation());
-//        System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
+        System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
 
-        startTime = System.currentTimeMillis();
-        ParallelTransportationProblemSolver parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
-        parallelTransportationProblemSolver.solve();
-        endTime = System.currentTimeMillis();
+//        for (int i = 1; i <= 23; ++i) {
+            startTime = System.currentTimeMillis();
+//            parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
+//            parallelTransportationProblemSolver.solve();
+            parallelTransportationProblemSolver = ParallelTransportationSolver.solveParallel(transportationProblem);
+            endTime = System.currentTimeMillis();
+
+//            if (i > 3)
+//                totalParallel += endTime - startTime;
+//        }
         System.out.println("Time taken for parallel transport problem: " + (endTime - startTime) + "ms");
+        System.out.println("Total cost of delivery: " + parallelTransportationProblemSolver.getCost());
 
         final boolean areEqual = SolutionValidator.compareSolutions(transportationProblemSolver.getAllocation(), parallelTransportationProblemSolver.getAllocation());
         if (areEqual)

@@ -1,198 +1,200 @@
 package org.example;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class ParallelTransportationProblemSolver extends TransportationProblemSolver {
-    private final ForkJoinPool pool = new ForkJoinPool();
+public class ParallelTransportationProblemSolver {
+    protected final int m, n;
+    protected final int[][] cost, allocation;
+    protected final int[] supply, demand;
+    protected final int[] u, v;
+    protected final int[][] delta;
+    protected Chain chain;
+    protected int minI, minJ;
+    protected boolean isCurrentSolutionOptimal;
+    protected final int NOT_ALLOCATED = -1, NO_SUPPLY = Integer.MAX_VALUE, NO_DEMAND = Integer.MAX_VALUE, UNDEFINED = Integer.MIN_VALUE;
 
-    protected ParallelTransportationProblemSolver(TransportationProblem problem) {
-        super(problem);
+    protected CornerStrategy strategy;
+
+    public ParallelTransportationProblemSolver(TransportationProblem problem, CornerStrategy strategy) {
+        this.m = problem.supply.length;
+        this.n = problem.demand.length;
+        this.cost = problem.cost;
+        this.supply = Arrays.copyOf(problem.supply, m);
+        this.demand = Arrays.copyOf(problem.demand, n);
+        this.allocation = new int[m][n];
+        for (int i = 0; i < m; ++i)
+            Arrays.fill(allocation[i], NOT_ALLOCATED);
+        this.u = new int[m];
+        this.v = new int[n];
+        this.delta = new int[m][n];
+        this.strategy = strategy;
+
+        if (!isBalanced())
+            throw new RuntimeException("Supplies do not match demands");
     }
 
-//  no acceleration, no slowing down
-    @Override
-    protected void computeDelta() {
-        pool.invoke(new ComputeDeltaTask(0, m, this));
-    }
-
-    private class ComputeDeltaTask extends RecursiveAction {
-        private final int start, end;
-        private final ParallelTransportationProblemSolver problemSolver;
-
-        ComputeDeltaTask(int start, int end, ParallelTransportationProblemSolver problemSolver) {
-            this.start = start;
-            this.end = end;
-            this.problemSolver = problemSolver;
+    public boolean solve(AtomicBoolean done) {
+        cornerMethod();
+        while (!done.get()) {
+            isCurrentSolutionOptimal = true;
+            computePotentials();
+            conductDeltaOperations();
+            if (isCurrentSolutionOptimal) {
+                done.set(true);
+                return true;
+            }
+            buildChain();
+            adjustAllocation();
         }
+        return false;
+    }
 
-        @Override
-        protected void compute() {
-            int THRESHOLD = 10;
-            if (end - start <= THRESHOLD) {
-                for (int i = start; i < end; ++i) {
-                    for (int j = 0; j < problemSolver.n; ++j) {
-                        if (problemSolver.allocation[i][j] == NOT_ALLOCATED)
-                            problemSolver.delta[i][j] = problemSolver.cost[i][j] - (problemSolver.u[i] + problemSolver.v[j]);
-                        else
-                            problemSolver.delta[i][j] = UNDEFINED;
+    public void cornerMethod() {
+        int i = (strategy == CornerStrategy.SOUTHWEST || strategy == CornerStrategy.SOUTHEAST) ? m - 1 : 0;
+        int j = (strategy == CornerStrategy.NORTHEAST || strategy == CornerStrategy.SOUTHEAST) ? n - 1 : 0;
+        int iStep = (i == 0) ? 1 : -1;
+        int jStep = (j == 0) ? 1 : -1;
+
+        while (i >= 0 && i < m && j >= 0 && j < n) {
+            int currentAllocation = Math.min(supply[i], demand[j]);
+            allocation[i][j] = (currentAllocation == NO_SUPPLY) ? NOT_ALLOCATED : currentAllocation;
+
+            if (supply[i] == demand[j]) {
+                supply[i] = NO_SUPPLY;
+                demand[j] = 0;
+                i += iStep;
+            } else {
+                supply[i] -= currentAllocation;
+                demand[j] -= currentAllocation;
+                if (supply[i] == 0) supply[i] = NO_SUPPLY;
+                if (demand[j] == 0) demand[j] = NO_DEMAND;
+                if (supply[i] == NO_SUPPLY) i += iStep;
+                else j += jStep;
+            }
+        }
+    }
+
+    public void computePotentials() {
+        Arrays.fill(u, UNDEFINED);
+        Arrays.fill(v, UNDEFINED);
+        u[0] = 0;
+
+        boolean updated;
+        do {
+            updated = false;
+            for (int i = 0; i < m; ++i) {
+                for (int j = 0; j < n; ++j) {
+                    if (allocation[i][j] != NOT_ALLOCATED) {
+                        if (u[i] != UNDEFINED && v[j] == UNDEFINED) {
+                            v[j] = cost[i][j] - u[i];
+                            updated = true;
+                        } else if (v[j] != UNDEFINED && u[i] == UNDEFINED) {
+                            u[i] = cost[i][j] - v[j];
+                            updated = true;
+                        }
                     }
                 }
-            } else {
-                int mid = (start + end) / 2;
-                ComputeDeltaTask left = new ComputeDeltaTask(start, mid, problemSolver);
-                ComputeDeltaTask right = new ComputeDeltaTask(mid, end, problemSolver);
-                invokeAll(left, right); // tried to compute one of the tasks right here - no changes
+            }
+        } while (updated);
+    }
+
+    public void conductDeltaOperations() {
+        int minDelta = Integer.MAX_VALUE;
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] == NOT_ALLOCATED) {
+                    delta[i][j] = cost[i][j] - (u[i] + v[j]);
+
+                    if (delta[i][j] < 0)
+                        isCurrentSolutionOptimal = false;
+
+                    if (delta[i][j] < minDelta) {
+                        minDelta = delta[i][j];
+                        minI = i;
+                        minJ = j;
+                    }
+                } else
+                    delta[i][j] = UNDEFINED;
             }
         }
     }
 
-//  extreme slowing down (tried Fork/Join - no changes)
-    @Override
+    public void buildChain() {
+        boolean isSearchInColumn = true;
+        boolean[][] visited = new boolean[m][n];
+        chain = new Chain(); // create a new chain on each iteration
+
+        Stack<ChainElement> stack = new Stack<>();
+        final ChainElement firstElement = new ChainElement(minI, minJ, cost[minI][minJ], allocation[minI][minJ]);
+        stack.push(firstElement);
+        chain.add(firstElement);
+
+        while (!chain.isClosed()) {
+            isSearchInColumn = !isSearchInColumn;
+
+            ChainElement currentElement = stack.peek();
+            visited[currentElement.i][currentElement.j] = true;
+
+            int nearestIndex = findNearestIndex(currentElement, isSearchInColumn, visited);
+
+            if (nearestIndex != -1) {
+                ChainElement newElement = isSearchInColumn
+                        ? new ChainElement(nearestIndex, currentElement.j, cost[nearestIndex][currentElement.j], allocation[nearestIndex][currentElement.j])
+                        : new ChainElement(currentElement.i, nearestIndex, cost[currentElement.i][nearestIndex], allocation[currentElement.i][nearestIndex]);
+
+                stack.push(newElement);
+                chain.add(newElement);
+            } else
+                chain.chain.remove(stack.pop());
+        }
+    }
+
     protected int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
+        int minDistance = Integer.MAX_VALUE;
+        int nearestIndex = -1;
         int fixedIndex = searchInColumn ? element.j : element.i;
-        ResultWrapper result = new ResultWrapper();
-        int numThreads = Runtime.getRuntime().availableProcessors();
+
         if (searchInColumn) {
-            List<SearchInColumnTask> tasks = new ArrayList<>();
-
-            int chunkSize = (m + numThreads - 1) / numThreads;
-
-            for (int t = 0; t < numThreads; ++t) {
-                int start = t * chunkSize;
-                int end = Math.min(start + chunkSize, m);
-                SearchInColumnTask task = new SearchInColumnTask(start, end, element, fixedIndex, visited, result);
-                tasks.add(task);
-                task.start();
-            }
-
-            for (SearchInColumnTask task : tasks) {
-                try {
-                    task.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            return result.nearestIndex;
-        }
-
-        List<SearchInRowTask> tasks = new ArrayList<>();
-
-        int chunkSize = (n + numThreads - 1) / numThreads;
-
-        for (int t = 0; t < numThreads; ++t) {
-            int start = t * chunkSize;
-            int end = Math.min(start + chunkSize, n);
-            SearchInRowTask task = new SearchInRowTask(start, end, element, fixedIndex, visited, result);
-            tasks.add(task);
-            task.start();
-        }
-
-        for (SearchInRowTask task : tasks) {
-            try {
-                task.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return result.nearestIndex;
-    }
-
-    private class SearchInColumnTask extends Thread {
-        private final int start, end, fixedIndex;
-        private final ChainElement element;
-        private final boolean[][] visited;
-        private final ResultWrapper result;
-
-        public SearchInColumnTask(int start, int end, ChainElement element, int fixedIndex, boolean[][] visited, ResultWrapper result) {
-            this.start = start;
-            this.end = end;
-            this.element = element;
-            this.fixedIndex = fixedIndex;
-            this.visited = visited;
-            this.result = result;
-        }
-
-        @Override
-        public void run() {
-            int localMinDistance = Integer.MAX_VALUE;
-            int localNearestIndex = -1;
-
-            for (int i = start; i < end; ++i) {
+            for (int i = 0; i < m; ++i) {
                 if (allocation[i][fixedIndex] != NOT_ALLOCATED && i != element.i && !visited[i][fixedIndex]) {
                     int distance = Math.abs(i - element.i);
-                    if (distance < localMinDistance) {
-                        localMinDistance = distance;
-                        localNearestIndex = i;
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestIndex = i;
                     }
                 }
             }
-
-            synchronized (result) {
-                if (localMinDistance < result.minDistance) {
-                    result.minDistance = localMinDistance;
-                    result.nearestIndex = localNearestIndex;
-                }
-            }
-        }
-    }
-
-    private class SearchInRowTask extends Thread {
-        private final int start, end, fixedIndex;
-        private final ChainElement element;
-        private final boolean[][] visited;
-        private final ResultWrapper result;
-
-        public SearchInRowTask(int start, int end, ChainElement element, int fixedIndex, boolean[][] visited, ResultWrapper result) {
-            this.start = start;
-            this.end = end;
-            this.element = element;
-            this.fixedIndex = fixedIndex;
-            this.visited = visited;
-            this.result = result;
-        }
-
-        @Override
-        public void run() {
-            int localMinDistance = Integer.MAX_VALUE;
-            int localNearestIndex = -1;
-
-            for (int j = start; j < end; ++j) {
+        } else {
+            for (int j = 0; j < n; ++j) {
                 if (allocation[fixedIndex][j] != NOT_ALLOCATED && j != element.j && !visited[fixedIndex][j]) {
                     int distance = Math.abs(j - element.j);
-                    if (distance < localMinDistance) {
-                        localMinDistance = distance;
-                        localNearestIndex = j;
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestIndex = j;
                     }
                 }
             }
-
-            synchronized (result) {
-                if (localMinDistance < result.minDistance) {
-                    result.minDistance = localMinDistance;
-                    result.nearestIndex = localNearestIndex;
-                }
-            }
         }
+        return nearestIndex;
     }
 
-    private static class ResultWrapper {
-        private int minDistance = Integer.MAX_VALUE;
-        private int nearestIndex = -1;
-    }
-
-//  I've tried to parallelize this method earlier, so it's also included, but it changes nothing
-    @Override
-    protected void adjustAllocation() {
+    public void adjustAllocation() {
         int minValue = chain.getMinValue();
 
-        pool.invoke(new AdjustAllocationTask(chain.chain, minValue, allocation, 0, chain.chain.size()));
-
-//      it's also possible to parallelize this part, but it's quite small and won't change anything
+        for (ChainElement chainElement : chain.chain) {
+            if (chainElement.sign == Sign.NEGATIVE) {
+                if (allocation[chainElement.i][chainElement.j] - minValue == 0)
+                    allocation[chainElement.i][chainElement.j] = NOT_ALLOCATED;
+                else
+                    allocation[chainElement.i][chainElement.j] -= minValue;
+            } else {
+                if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
+                    allocation[chainElement.i][chainElement.j] += minValue + 1;
+                else
+                    allocation[chainElement.i][chainElement.j] += minValue;
+            }
+        }
         int degenerateCount = degenerateCount();
         if (degenerateCount > 0) {
             ArrayList<ChainElement> degenerateElements = new ArrayList<>();
@@ -200,51 +202,46 @@ public class ParallelTransportationProblemSolver extends TransportationProblemSo
                 if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
                     degenerateElements.add(chainElement);
             }
-            degenerateElements.sort((chainElement1, chainElement2) -> cost[chainElement2.i][chainElement2.j] - cost[chainElement1.i][chainElement1.j]);
             for (int i = 0; i < degenerateCount; ++i)
                 allocation[degenerateElements.get(i).i][degenerateElements.get(i).j] = 0;
         }
     }
 
-    private class AdjustAllocationTask extends RecursiveAction {
-        private final List<ChainElement> chain;
-        private final int minValue;
-        private final int[][] allocation;
-        private final int start, end;
+    public int[][] getAllocation() {
+        return allocation;
+    }
 
-        AdjustAllocationTask(List<ChainElement> chain, int minValue, int[][] allocation, int start, int end) {
-            this.chain = chain;
-            this.minValue = minValue;
-            this.allocation = allocation;
-            this.start = start;
-            this.end = end;
-        }
-
-        @Override
-        protected void compute() {
-            int THRESHOLD = 10;
-            if (end - start <= THRESHOLD) {
-                for (int i = start; i < end; ++i) {
-                    ChainElement chainElement = chain.get(i);
-                    if (chainElement.sign == Sign.NEGATIVE) {
-                        if (allocation[chainElement.i][chainElement.j] - minValue == 0)
-                            allocation[chainElement.i][chainElement.j] = NOT_ALLOCATED;
-                        else
-                            allocation[chainElement.i][chainElement.j] -= minValue;
-                    }
-                    else {
-                        if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
-                            allocation[chainElement.i][chainElement.j] += minValue + 1;
-                        else
-                            allocation[chainElement.i][chainElement.j] += minValue;
-                    }
-                }
-            } else {
-                int mid = (start + end) / 2;
-                AdjustAllocationTask left = new AdjustAllocationTask(chain, minValue, allocation, start, mid);
-                AdjustAllocationTask right = new AdjustAllocationTask(chain, minValue, allocation, mid, end);
-                invokeAll(left, right);
+    public int getCost() {
+        int totalCost = 0;
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] > 0)
+                    totalCost += allocation[i][j] * cost[i][j];
             }
         }
+        return totalCost;
+    }
+
+    private boolean isBalanced() {
+        int supplySum = 0, demandSum = 0;
+        for (int i = 0; i < m; ++i)
+            supplySum += supply[i];
+
+        for (int i = 0; i < n; ++i)
+            demandSum += demand[i];
+
+        return supplySum == demandSum;
+    }
+
+    protected int degenerateCount() {
+        int basisCount = 0;
+
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if (allocation[i][j] != NOT_ALLOCATED)
+                    ++basisCount;
+            }
+        }
+        return m + n - 1 - basisCount;
     }
 }
