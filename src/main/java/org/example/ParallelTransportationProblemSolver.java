@@ -1,11 +1,12 @@
 package org.example;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ParallelTransportationProblemSolver {
     protected final int m, n;
     protected final int[][] cost, allocation;
+    protected final List<Location> allocated = new ArrayList<>();
+    protected final List<Location> notAllocated = new ArrayList<>();
     protected final int[] supply, demand;
     protected final int[] u, v;
     protected final int[][] delta;
@@ -14,9 +15,7 @@ public class ParallelTransportationProblemSolver {
     protected boolean isCurrentSolutionOptimal;
     protected final int NOT_ALLOCATED = -1, NO_SUPPLY = Integer.MAX_VALUE, NO_DEMAND = Integer.MAX_VALUE, UNDEFINED = Integer.MIN_VALUE;
 
-    protected CornerStrategy strategy;
-
-    public ParallelTransportationProblemSolver(TransportationProblem problem, CornerStrategy strategy) {
+    protected ParallelTransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
         this.n = problem.demand.length;
         this.cost = problem.cost;
@@ -25,102 +24,121 @@ public class ParallelTransportationProblemSolver {
         this.allocation = new int[m][n];
         for (int i = 0; i < m; ++i)
             Arrays.fill(allocation[i], NOT_ALLOCATED);
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j)
+                notAllocated.add(new Location(i, j));
+        }
         this.u = new int[m];
         this.v = new int[n];
         this.delta = new int[m][n];
-        this.strategy = strategy;
 
         if (!isBalanced())
             throw new RuntimeException("Supplies do not match demands");
     }
 
-    public boolean solve(AtomicBoolean done) {
-        cornerMethod();
-        while (!done.get()) {
+    public void solve() {
+        northwestCornerMethod();
+        while (true) {
             isCurrentSolutionOptimal = true;
             computePotentials();
             conductDeltaOperations();
-            if (isCurrentSolutionOptimal) {
-                done.set(true);
-                return true;
-            }
+            if (isCurrentSolutionOptimal)
+                break;
             buildChain();
             adjustAllocation();
         }
-        return false;
     }
 
-    public void cornerMethod() {
-        int i = (strategy == CornerStrategy.SOUTHWEST || strategy == CornerStrategy.SOUTHEAST) ? m - 1 : 0;
-        int j = (strategy == CornerStrategy.NORTHEAST || strategy == CornerStrategy.SOUTHEAST) ? n - 1 : 0;
-        int iStep = (i == 0) ? 1 : -1;
-        int jStep = (j == 0) ? 1 : -1;
-
-        while (i >= 0 && i < m && j >= 0 && j < n) {
+    protected void northwestCornerMethod() {
+        int i = 0, j = 0;
+        while (i < m && j < n) {
             int currentAllocation = Math.min(supply[i], demand[j]);
-            allocation[i][j] = (currentAllocation == NO_SUPPLY) ? NOT_ALLOCATED : currentAllocation;
+
+            if (currentAllocation != NO_SUPPLY) {
+                allocation[i][j] = currentAllocation;
+                int finalI = i;
+                int finalJ = j;
+                notAllocated.remove(notAllocated.stream().filter((element) -> element.i == finalI && element.j == finalJ).findFirst().get());
+                allocated.add(new Location(i, j));
+            }
 
             if (supply[i] == demand[j]) {
                 supply[i] = NO_SUPPLY;
                 demand[j] = 0;
-                i += iStep;
+                ++i;
             } else {
                 supply[i] -= currentAllocation;
                 demand[j] -= currentAllocation;
                 if (supply[i] == 0) supply[i] = NO_SUPPLY;
                 if (demand[j] == 0) demand[j] = NO_DEMAND;
-                if (supply[i] == NO_SUPPLY) i += iStep;
-                else j += jStep;
+                if (supply[i] == NO_SUPPLY) ++i;
+                else ++j;
             }
         }
     }
 
-    public void computePotentials() {
+    protected void computePotentials() {
         Arrays.fill(u, UNDEFINED);
         Arrays.fill(v, UNDEFINED);
         u[0] = 0;
 
-        boolean updated;
-        do {
-            updated = false;
-            for (int i = 0; i < m; ++i) {
-                for (int j = 0; j < n; ++j) {
-                    if (allocation[i][j] != NOT_ALLOCATED) {
-                        if (u[i] != UNDEFINED && v[j] == UNDEFINED) {
-                            v[j] = cost[i][j] - u[i];
-                            updated = true;
-                        } else if (v[j] != UNDEFINED && u[i] == UNDEFINED) {
-                            u[i] = cost[i][j] - v[j];
-                            updated = true;
-                        }
+        List<Integer>[] rows = new List[m];
+        List<Integer>[] cols = new List[n];
+        for (int i = 0; i < m; ++i) rows[i] = new ArrayList<>();
+        for (int j = 0; j < n; ++j) cols[j] = new ArrayList<>();
+
+        for (Location loc : allocated) {
+            rows[loc.i].add(loc.j);
+            cols[loc.j].add(loc.i);
+        }
+
+        Deque<Integer> supplyQueue = new ArrayDeque<>();
+        Deque<Integer> demandQueue = new ArrayDeque<>();
+        supplyQueue.add(0);
+
+        while (!supplyQueue.isEmpty()) {
+
+            while (!supplyQueue.isEmpty()) {
+                int i = supplyQueue.removeFirst();
+                for (int j : rows[i]) {
+                    if (v[j] == UNDEFINED) {
+                        v[j] = cost[i][j] - u[i];
+                        demandQueue.addLast(j);
                     }
                 }
             }
-        } while (updated);
-    }
 
-    public void conductDeltaOperations() {
-        int minDelta = Integer.MAX_VALUE;
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (allocation[i][j] == NOT_ALLOCATED) {
-                    delta[i][j] = cost[i][j] - (u[i] + v[j]);
-
-                    if (delta[i][j] < 0)
-                        isCurrentSolutionOptimal = false;
-
-                    if (delta[i][j] < minDelta) {
-                        minDelta = delta[i][j];
-                        minI = i;
-                        minJ = j;
+            while (!demandQueue.isEmpty()) {
+                int j = demandQueue.removeFirst();
+                for (int i : cols[j]) {
+                    if (u[i] == UNDEFINED) {
+                        u[i] = cost[i][j] - v[j];
+                        supplyQueue.addLast(i);
                     }
-                } else
-                    delta[i][j] = UNDEFINED;
+                }
             }
         }
     }
 
-    public void buildChain() {
+    protected void conductDeltaOperations() {
+        int minDelta = Integer.MAX_VALUE;
+        for (Location location : notAllocated) {
+            delta[location.i][location.j] = cost[location.i][location.j] - (u[location.i] + v[location.j]);
+
+            if (delta[location.i][location.j] < 0)
+                isCurrentSolutionOptimal = false;
+
+            if (delta[location.i][location.j] < minDelta) {
+                minDelta = delta[location.i][location.j];
+                minI = location.i;
+                minJ = location.j;
+            }
+        }
+        for (Location location : allocated)
+            delta[location.i][location.j] = UNDEFINED;
+    }
+
+    private void buildChain() {
         boolean isSearchInColumn = true;
         boolean[][] visited = new boolean[m][n];
         chain = new Chain(); // create a new chain on each iteration
@@ -179,18 +197,24 @@ public class ParallelTransportationProblemSolver {
         return nearestIndex;
     }
 
-    public void adjustAllocation() {
+    protected void adjustAllocation() {
         int minValue = chain.getMinValue();
 
         for (ChainElement chainElement : chain.chain) {
             if (chainElement.sign == Sign.NEGATIVE) {
-                if (allocation[chainElement.i][chainElement.j] - minValue == 0)
+                if (allocation[chainElement.i][chainElement.j] - minValue == 0) {
                     allocation[chainElement.i][chainElement.j] = NOT_ALLOCATED;
+                    allocated.remove(allocated.stream().filter((element) -> element.i == chainElement.i && element.j == chainElement.j).findFirst().get());
+                    notAllocated.add(new Location(chainElement.i, chainElement.j));
+                }
                 else
                     allocation[chainElement.i][chainElement.j] -= minValue;
             } else {
-                if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
+                if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED) {
                     allocation[chainElement.i][chainElement.j] += minValue + 1;
+                    notAllocated.remove(notAllocated.stream().filter((element) -> element.i == chainElement.i && element.j == chainElement.j).findFirst().get());
+                    allocated.add(new Location(chainElement.i, chainElement.j));
+                }
                 else
                     allocation[chainElement.i][chainElement.j] += minValue;
             }
@@ -202,8 +226,22 @@ public class ParallelTransportationProblemSolver {
                 if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
                     degenerateElements.add(chainElement);
             }
-            for (int i = 0; i < degenerateCount; ++i)
+            degenerateElements.sort((chainElement1, chainElement2) -> cost[chainElement2.i][chainElement2.j] - cost[chainElement1.i][chainElement1.j]);
+            for (int i = 0; i < degenerateCount; ++i) {
                 allocation[degenerateElements.get(i).i][degenerateElements.get(i).j] = 0;
+                int finalI = i;
+                notAllocated.remove(notAllocated.stream().filter((element) -> element.i == degenerateElements.get(finalI).i && element.j == degenerateElements.get(finalI).j).findFirst().get());
+                allocated.add(new Location(degenerateElements.get(finalI).i, degenerateElements.get(finalI).j));
+            }
+        }
+    }
+
+    static class Location {
+        public int i, j;
+
+        public Location(int i, int j) {
+            this.i = i;
+            this.j = j;
         }
     }
 

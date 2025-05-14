@@ -24,7 +24,7 @@ public class Main {
 //        TransportationProblem transportationProblem = new TransportationProblem(cost, supply, demand);
 
 //      Automatically generated (do not comment in lines with printing an optimal solution and a total cost if the problem is huge)
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(100, 100, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(100, 1000, 10, 100, 100, 1);
 
         long startTime = 0, endTime = 0, totalSequential = 0, totalParallel = 0;
         TransportationProblemSolver transportationProblemSolver = null;
@@ -46,15 +46,15 @@ public class Main {
 
 //        for (int i = 1; i <= 23; ++i) {
             startTime = System.currentTimeMillis();
-//            parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
-//            parallelTransportationProblemSolver.solve();
-            parallelTransportationProblemSolver = ParallelTransportationSolver.solveParallel(transportationProblem);
+            parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
+            parallelTransportationProblemSolver.solve();
             endTime = System.currentTimeMillis();
 
 //            if (i > 3)
 //                totalParallel += endTime - startTime;
 //        }
         System.out.println("Time taken for parallel transport problem: " + (endTime - startTime) + "ms");
+//        TransportationProblemPrinter.printAllocation("Optimal solution: ", parallelTransportationProblemSolver.getAllocation());
         System.out.println("Total cost of delivery: " + parallelTransportationProblemSolver.getCost());
 
         final boolean areEqual = SolutionValidator.compareSolutions(transportationProblemSolver.getAllocation(), parallelTransportationProblemSolver.getAllocation());
