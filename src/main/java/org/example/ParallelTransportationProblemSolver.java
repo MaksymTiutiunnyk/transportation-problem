@@ -19,7 +19,7 @@ public class ParallelTransportationProblemSolver {
     protected final int numThreads;
     protected final ExecutorService executor;
 
-    protected ParallelTransportationProblemSolver(TransportationProblem problem) throws ExecutionException, InterruptedException {
+    protected ParallelTransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
         this.n = problem.demand.length;
         this.cost = problem.cost;

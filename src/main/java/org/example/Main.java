@@ -31,10 +31,10 @@ public class Main {
         ParallelTransportationProblemSolver parallelTransportationProblemSolver = null;
 
 //        for (int i = 1; i <= 23; ++i) {
-            startTime = System.currentTimeMillis();
-            transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
-            transportationProblemSolver.solve();
-            endTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
+        transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
+        transportationProblemSolver.solve();
+        endTime = System.currentTimeMillis();
 
 //            if (i > 3)
 //                totalSequential += endTime - startTime;
@@ -45,10 +45,10 @@ public class Main {
         System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
 
 //        for (int i = 1; i <= 23; ++i) {
-            startTime = System.currentTimeMillis();
-            parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
-            parallelTransportationProblemSolver.solve();
-            endTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
+        parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
+        parallelTransportationProblemSolver.solve();
+        endTime = System.currentTimeMillis();
 
 //            if (i > 3)
 //                totalParallel += endTime - startTime;
