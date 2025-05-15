@@ -24,7 +24,7 @@ public class Main {
 //        TransportationProblem transportationProblem = new TransportationProblem(cost, supply, demand);
 
 //      Automatically generated (do not comment in lines with printing an optimal solution and a total cost if the problem is huge)
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(100, 1000, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(500, 500, 10, 100, 100, 1);
 
         long startTime = 0, endTime = 0, totalSequential = 0, totalParallel = 0;
         TransportationProblemSolver transportationProblemSolver = null;
@@ -40,7 +40,7 @@ public class Main {
 //                totalSequential += endTime - startTime;
 //        }
 
-        System.out.println("Time taken for sequential transport problem: " + (endTime - startTime) + "ms");
+        System.out.println("Time taken for sequential transportation problem: " + (endTime - startTime) + "ms");
 //        TransportationProblemPrinter.printAllocation("Optimal solution: ", transportationProblemSolver.getAllocation());
         System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
 
@@ -53,7 +53,7 @@ public class Main {
 //            if (i > 3)
 //                totalParallel += endTime - startTime;
 //        }
-        System.out.println("Time taken for parallel transport problem: " + (endTime - startTime) + "ms");
+        System.out.println("Time taken for parallel transportation problem: " + (endTime - startTime) + "ms");
 //        TransportationProblemPrinter.printAllocation("Optimal solution: ", parallelTransportationProblemSolver.getAllocation());
         System.out.println("Total cost of delivery: " + parallelTransportationProblemSolver.getCost());
 

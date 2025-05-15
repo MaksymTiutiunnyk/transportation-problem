@@ -37,7 +37,7 @@ public class TransportationProblemSolver {
         while (true) {
             isCurrentSolutionOptimal = true;
             computePotentials();
-            conductDeltaOperations();
+            isCurrentSolutionOptimal = conductDeltaOperations();
             if (isCurrentSolutionOptimal)
                 break;
             buildChain();
@@ -90,7 +90,7 @@ public class TransportationProblemSolver {
         } while (updated);
     }
 
-    public void conductDeltaOperations() {
+    public boolean conductDeltaOperations() {
         int minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
@@ -109,6 +109,7 @@ public class TransportationProblemSolver {
                     delta[i][j] = UNDEFINED;
             }
         }
+        return isCurrentSolutionOptimal;
     }
 
     public void buildChain() {
@@ -186,6 +187,7 @@ public class TransportationProblemSolver {
                     allocation[chainElement.i][chainElement.j] += minValue;
             }
         }
+
         int degenerateCount = degenerateCount();
         if (degenerateCount > 0) {
             ArrayList<ChainElement> degenerateElements = new ArrayList<>();
