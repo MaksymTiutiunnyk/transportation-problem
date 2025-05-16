@@ -203,6 +203,7 @@ public class ParallelTransportationProblemSolver {
                 if (allocation[chainElement.i][chainElement.j] == NOT_ALLOCATED)
                     degenerateElements.add(chainElement);
             }
+            degenerateElements.sort((chainElement1, chainElement2) -> cost[chainElement2.i][chainElement2.j] - cost[chainElement1.i][chainElement1.j]);
             for (int i = 0; i < degenerateCount; ++i)
                 allocation[degenerateElements.get(i).i][degenerateElements.get(i).j] = 0;
         }

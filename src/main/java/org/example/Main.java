@@ -46,9 +46,7 @@ public class Main {
 
 //        for (int i = 1; i <= 23; ++i) {
         startTime = System.currentTimeMillis();
-//            parallelTransportationProblemSolver = new ParallelTransportationProblemSolver(transportationProblem);
-//            parallelTransportationProblemSolver.solve();
-        parallelTransportationProblemSolver = ParallelTransportationSolver.solveParallel(transportationProblem);
+        parallelTransportationProblemSolver = ParallelTransportationProblemSolverWrapper.solveParallel(transportationProblem);
         endTime = System.currentTimeMillis();
 
 //            if (i > 3)

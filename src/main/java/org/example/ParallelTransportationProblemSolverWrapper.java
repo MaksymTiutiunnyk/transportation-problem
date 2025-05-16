@@ -11,7 +11,7 @@ enum CornerStrategy {
     NORTHWEST, NORTHEAST, SOUTHWEST, SOUTHEAST
 }
 
-public class ParallelTransportationSolver {
+public class ParallelTransportationProblemSolverWrapper {
     public static ParallelTransportationProblemSolver solveParallel(TransportationProblem problem) throws Exception {
         try (ExecutorService executor = Executors.newFixedThreadPool(4)) {
             AtomicBoolean done = new AtomicBoolean(false);
@@ -28,16 +28,16 @@ public class ParallelTransportationSolver {
                 }));
             }
 
-            ParallelTransportationProblemSolver first = null;
+            ParallelTransportationProblemSolver firstSolver = null;
 
             for (Future<ParallelTransportationProblemSolver> f : futures) {
                 ParallelTransportationProblemSolver result = f.get();
                 if (result != null) {
-                    first = result;
+                    firstSolver = result;
                     break;
                 }
             }
-            return first;
+            return firstSolver;
         }
     }
 }
