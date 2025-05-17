@@ -24,35 +24,36 @@ public class Main {
 //        TransportationProblem transportationProblem = new TransportationProblem(cost, supply, demand);
 
 //      Automatically generated (do not comment in lines with printing an optimal solution and a total cost if the problem is huge)
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(500, 500, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(1000, 1000, 10, 100, 100, 1);
 
         long startTime = 0, endTime = 0, totalSequential = 0, totalParallel = 0;
+        int numIterations = 20;
         TransportationProblemSolver transportationProblemSolver = null;
         ParallelTransportationProblemSolver parallelTransportationProblemSolver = null;
 
-//        for (int i = 1; i <= 23; ++i) {
+        for (int i = 1; i <= numIterations; ++i) {
         startTime = System.currentTimeMillis();
         transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
         transportationProblemSolver.solve();
         endTime = System.currentTimeMillis();
 
-//            if (i > 3)
-//                totalSequential += endTime - startTime;
-//        }
+            if (i > 0)
+                totalSequential += endTime - startTime;
+        }
 
-        System.out.println("Time taken for sequential transportation problem: " + (endTime - startTime) + "ms");
+        System.out.println("Time taken for sequential transportation problem (NORTHWEST): " + totalSequential + "ms");
 //        TransportationProblemPrinter.printAllocation("Optimal solution: ", transportationProblemSolver.getAllocation());
         System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
 
-//        for (int i = 1; i <= 23; ++i) {
+        for (int i = 1; i <= numIterations; ++i) {
         startTime = System.currentTimeMillis();
         parallelTransportationProblemSolver = ParallelTransportationProblemSolverWrapper.solveParallel(transportationProblem);
         endTime = System.currentTimeMillis();
 
-//            if (i > 3)
-//                totalParallel += endTime - startTime;
-//        }
-        System.out.println("Time taken for parallel transportation problem: " + (endTime - startTime) + "ms");
+            if (i > 0)
+                totalParallel += endTime - startTime;
+        }
+        System.out.println("Time taken for parallel transportation problem: " + totalParallel + "ms");
 //        TransportationProblemPrinter.printAllocation("Optimal solution: ", parallelTransportationProblemSolver.getAllocation());
         System.out.println("Total cost of delivery: " + parallelTransportationProblemSolver.getCost());
 
@@ -61,5 +62,7 @@ public class Main {
             System.out.println("Solutions are equal");
         else
             System.out.println("Solutions are not equal");
+
+        System.out.println("Acceleration: " + (double) totalSequential / (double) totalParallel);
     }
 }
