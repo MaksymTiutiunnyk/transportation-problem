@@ -31,7 +31,7 @@ public class ParallelTransportationProblemSolver {
         this.u = new int[m];
         this.v = new int[n];
         this.delta = new int[m][n];
-        this.numThreads = Math.min(m, Runtime.getRuntime().availableProcessors());
+        this.numThreads = 16;
         executor = Executors.newFixedThreadPool(numThreads);
 
         if (!isBalanced())
