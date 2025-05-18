@@ -15,7 +15,7 @@ public class TransportationProblemSolver {
     protected boolean isCurrentSolutionOptimal;
     protected final int NOT_ALLOCATED = -1, NO_SUPPLY = Integer.MAX_VALUE, NO_DEMAND = Integer.MAX_VALUE, UNDEFINED = Integer.MIN_VALUE;
 
-    protected TransportationProblemSolver(TransportationProblem problem) {
+    public TransportationProblemSolver(TransportationProblem problem) {
         this.m = problem.supply.length;
         this.n = problem.demand.length;
         this.cost = problem.cost;
@@ -45,7 +45,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    public void northwestCornerMethod() {
+    protected void northwestCornerMethod() {
         int i = 0, j = 0;
         while (i < m && j < n) {
             int currentAllocation = Math.min(supply[i], demand[j]);
@@ -66,7 +66,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    public void computePotentials() {
+    protected void computePotentials() {
         Arrays.fill(u, UNDEFINED);
         Arrays.fill(v, UNDEFINED);
         u[0] = 0;
@@ -90,7 +90,7 @@ public class TransportationProblemSolver {
         } while (updated);
     }
 
-    public boolean conductDeltaOperations() {
+    protected boolean conductDeltaOperations() {
         int minDelta = Integer.MAX_VALUE;
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
@@ -112,7 +112,7 @@ public class TransportationProblemSolver {
         return isCurrentSolutionOptimal;
     }
 
-    public void buildChain() {
+    protected void buildChain() {
         boolean isSearchInColumn = true;
         boolean[][] visited = new boolean[m][n];
         chain = new Chain(); // create a new chain on each iteration
@@ -142,7 +142,7 @@ public class TransportationProblemSolver {
         }
     }
 
-    public int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
+    protected int findNearestIndex(ChainElement element, boolean searchInColumn, boolean[][] visited) {
         int minDistance = Integer.MAX_VALUE;
         int nearestIndex = -1;
         int fixedIndex = searchInColumn ? element.j : element.i;
@@ -171,7 +171,7 @@ public class TransportationProblemSolver {
         return nearestIndex;
     }
 
-    public void adjustAllocation() {
+    protected void adjustAllocation() {
         int minValue = chain.getMinValue();
 
         for (ChainElement chainElement : chain.chain) {
