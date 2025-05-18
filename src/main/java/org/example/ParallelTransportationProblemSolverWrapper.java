@@ -2,6 +2,7 @@ package org.example;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -12,7 +13,7 @@ enum CornerStrategy {
 }
 
 public class ParallelTransportationProblemSolverWrapper {
-    public static ParallelTransportationProblemSolver solveParallel(TransportationProblem problem) throws Exception {
+    public static ParallelTransportationProblemSolver solveFourCorners(TransportationProblem problem) {
         try (ExecutorService executor = Executors.newFixedThreadPool(4)) {
             AtomicBoolean done = new AtomicBoolean(false);
             List<Future<ParallelTransportationProblemSolver>> futures = new ArrayList<>();
@@ -30,12 +31,16 @@ public class ParallelTransportationProblemSolverWrapper {
 
             ParallelTransportationProblemSolver firstSolver = null;
 
-            for (Future<ParallelTransportationProblemSolver> f : futures) {
-                ParallelTransportationProblemSolver result = f.get();
-                if (result != null) {
-                    firstSolver = result;
-                    break;
+            try {
+                for (Future<ParallelTransportationProblemSolver> f : futures) {
+                    ParallelTransportationProblemSolver result = f.get();
+                    if (result != null) {
+                        firstSolver = result;
+                        break;
+                    }
                 }
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
             }
             return firstSolver;
         }

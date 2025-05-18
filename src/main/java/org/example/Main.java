@@ -1,7 +1,7 @@
 package org.example;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 //        A normal test case (you can comment in lines with printing an optimal solution and a total cost)
 //        int[][] cost = {
 //                {3, 1, 4, 8},
@@ -24,18 +24,18 @@ public class Main {
 //        TransportationProblem transportationProblem = new TransportationProblem(cost, supply, demand);
 
 //      Automatically generated (do not comment in lines with printing an optimal solution and a total cost if the problem is huge)
-        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(1000, 1000, 10, 100, 100, 1);
+        TransportationProblem transportationProblem = TransportationProblemGenerator.generate(500, 500, 10, 100, 100, 1);
 
-        long startTime = 0, endTime = 0, totalSequential = 0, totalParallel = 0;
-        int numIterations = 20;
+        long startTime, endTime, totalSequential = 0, totalParallel = 0;
+        int numIterations = 1; // for performance measuring it should be changed to 20
         TransportationProblemSolver transportationProblemSolver = null;
         ParallelTransportationProblemSolver parallelTransportationProblemSolver = null;
 
         for (int i = 1; i <= numIterations; ++i) {
-        startTime = System.currentTimeMillis();
-        transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
-        transportationProblemSolver.solve();
-        endTime = System.currentTimeMillis();
+            startTime = System.currentTimeMillis();
+            transportationProblemSolver = new TransportationProblemSolver(transportationProblem);
+            transportationProblemSolver.solve();
+            endTime = System.currentTimeMillis();
 
             if (i > 0)
                 totalSequential += endTime - startTime;
@@ -46,9 +46,9 @@ public class Main {
         System.out.println("Total cost of delivery: " + transportationProblemSolver.getCost());
 
         for (int i = 1; i <= numIterations; ++i) {
-        startTime = System.currentTimeMillis();
-        parallelTransportationProblemSolver = ParallelTransportationProblemSolverWrapper.solveParallel(transportationProblem);
-        endTime = System.currentTimeMillis();
+            startTime = System.currentTimeMillis();
+            parallelTransportationProblemSolver = ParallelTransportationProblemSolverWrapper.solveFourCorners(transportationProblem);
+            endTime = System.currentTimeMillis();
 
             if (i > 0)
                 totalParallel += endTime - startTime;
